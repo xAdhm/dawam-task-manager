@@ -37,7 +37,7 @@ public class TaskController {
         return sectionRepository.findById(sectionId)
                 .filter(section -> section.getUserId().equals(userId))
                 .map(section -> {
-                    List<TaskResponse> tasks = taskRepository.findBySectionId(sectionId)
+                    List<TaskResponse> tasks = taskRepository.findBySectionIdOrderByPosition(sectionId)
                             .stream()
                             .map(this::toResponseWithDoneToday)
                             .toList();
@@ -55,11 +55,14 @@ public class TaskController {
         return sectionRepository.findById(sectionId)
                 .filter(section -> section.getUserId().equals(userId))
                 .map(section -> {
+                    int nextPosition = taskRepository.findBySectionIdOrderByPosition(sectionId).size();
+
                     Task task = new Task();
                     task.setSection(section);
                     task.setTitle(request.getTitle());
                     task.setType(request.getType());
                     task.setCompleted(false);
+                    task.setPosition(nextPosition);
 
                     applyTypeSpecificFields(task, request);
 
@@ -136,6 +139,40 @@ public class TaskController {
                     }
 
                     return ResponseEntity.ok(toResponseWithDoneToday(task));
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @Transactional
+    @PutMapping("/reorder")
+    public ResponseEntity<List<TaskResponse>> reorderTasks(@AuthenticationPrincipal Jwt jwt,
+                                                           @PathVariable UUID sectionId,
+                                                           @RequestBody List<UUID> orderedIds) {
+        UUID userId = UUID.fromString(jwt.getSubject());
+
+        return sectionRepository.findById(sectionId)
+                .filter(section -> section.getUserId().equals(userId))
+                .map(section -> {
+                    List<Task> tasks = taskRepository.findBySectionIdOrderByPosition(sectionId);
+
+                    var tasksById = tasks.stream()
+                            .collect(java.util.stream.Collectors.toMap(Task::getId, t -> t));
+
+                    for (int i = 0; i < orderedIds.size(); i++) {
+                        Task task = tasksById.get(orderedIds.get(i));
+                        if (task != null) {
+                            task.setPosition(i);
+                        }
+                    }
+
+                    taskRepository.saveAll(tasks);
+
+                    List<TaskResponse> updated = taskRepository.findBySectionIdOrderByPosition(sectionId)
+                            .stream()
+                            .map(this::toResponseWithDoneToday)
+                            .toList();
+
+                    return ResponseEntity.ok(updated);
                 })
                 .orElse(ResponseEntity.notFound().build());
     }

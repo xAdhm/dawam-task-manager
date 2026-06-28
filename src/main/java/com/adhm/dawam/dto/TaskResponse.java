@@ -23,6 +23,7 @@ public class TaskResponse {
     private List<RecurrenceRule.DayOfWeek> daysOfWeek;
     private boolean doneToday;
     private boolean dueTodayFlag;
+    private Integer position;
 
     public static TaskResponse from(Task task) {
         TaskResponse response = new TaskResponse();
@@ -32,6 +33,7 @@ public class TaskResponse {
         response.type = task.getType();
         response.dueDate = task.getDueDate();
         response.completed = task.isCompleted();
+        response.position = task.getPosition();
 
         if (task.getRecurrenceRule() != null) {
             response.frequency = task.getRecurrenceRule().getFrequency();

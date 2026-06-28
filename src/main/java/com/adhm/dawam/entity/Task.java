@@ -41,6 +41,9 @@ public class Task {
     @Column(nullable = false)
     private boolean completed = false;
 
+    @Column(nullable = false)
+    private Integer position = 0;
+
     public enum TaskType {
         ONE_TIME,
         RECURRING
